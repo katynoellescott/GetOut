@@ -30,11 +30,6 @@ def access_weather():
     return current_weather
 
 
-# def access_tide(current_tide):
-#     '''Pulls Pacific Grove current tide height from Weather Underground API'''
-
-
-
 def access_rain_history():
     '''Pulls precipitation totals in Pacific Grove for past 48 hours from
     Weather Underground API'''
@@ -67,13 +62,13 @@ def access_rain_history():
 def access_ocean_data():
     '''Pulls Pacific Grove ocean data from NOAA buoy, updated every 30 minutes.'''
 
-    ocean_data = {'Water Temperature': '','Wave Height': '','Swell Height':'','Swell Period':''}
+    ocean_data = {'Water Temperature': '','Wave Height': '','Swell Height':'','Swell Period':'', 'Wave Direction': ''}
 
     raw_temp_data = urlopen("http://www.ndbc.noaa.gov/data/realtime2/46240.txt")
     raw_temp_data.readline()  # Throw away line 1
     raw_temp_data.readline()  # Throw away line 2
     current_temp_data = raw_temp_data.readline().strip().split(' ')
-    current_temp_C = float(current_temp_data[35])
+    current_temp_C = float(current_temp_data[34])
     current_temp = (current_temp_C * 1.8) + 32 #convert to Fahrenheit
 
     raw_swell_data = urlopen("http://www.ndbc.noaa.gov/data/realtime2/46240.spec")
@@ -85,22 +80,39 @@ def access_ocean_data():
     ocean_data['Wave Height'] = float(current_swell[6])
     ocean_data['Swell Height'] = float(current_swell[8])
     ocean_data['Swell Period'] = float(current_swell[9])
+    ocean_data['Wave Direction'] = float(current_swell[-1])
 
     return ocean_data
 
 
+def calculate_visibility(rain, weather_data, ocean_data):
+    '''use rain, swell and wind info from past days to predict visibility'''
+    
+    if rain >= 0.3:
+        return "poor"
+    elif ocean_data['Swell Height'] > 5:
+        return "poor"
+    elif weather_data['Wind Speed'] > 15:
+        return "poor"
+    else:
+        return "good"
 
 
-# def calculate_visibility():
-#     use rain, swell and wind info from past days to predict visibility:
-        # if rain in past 48 hours, BAD visibility
-        # if large swell (> 5), BAD visibility 
-        # if strong winds, BAD visibility
-        # if tides...
-
-
-# def calculate_chop():
-#     use swell, wind and wave height to predict chopiness
+def calculate_chop(ocean_data):
+     """use swell period and wind direction to predict chopiness"""
+     period = ocean_data['Swell Period']
+     direction = ocean_data['Wave Direction']
+     height = ocean_data ['Wave Height']
+     if direction >= 191.25 and direction <= 258.75:
+        return "low" 
+     elif direction > 303.75 and direction <326.25:
+        return "high"
+     elif period > 10 and height <= 3:
+        return "low"
+     elif period < 8:
+        return "high"
+     else:
+        return "average"
 
 
 
@@ -108,20 +120,28 @@ def recommend_sport():
     """uses weather and surf data to calculate activity recommendation, puts 
     recommendations in order of preference, so if there's a tie the most preferred 
     wins"""
+
+    weather_dict = access_weather()
+    ocean_dict = access_ocean_data()
+    rain_history = access_rain_history()
+    chop = calculate_chop(ocean_dict)
+    visibility = calculate_visibility(rain_history, weather_dict, ocean_dict)
+
     
-    if float(current_temp) < 40 or float(current_rain) > 24:  #or water temperature is really cold:
+    if weather_dict["Temperature"] < 40 or weather_dict["Chance of Rain"] > 24:  
         return "stay_in_bed" 
-#     elif good visibility and calm water:
-#           Swell height: 3 feet or less
-#           Wave height: 2 feet or less
-#           Fewer waves = good
-#           Less wind = good
-#         return snorkel
-#     elif blown-out waves and lots of wind:
-#         return boogie_board
-#     elif calm water (but none of the above are good):
-#         return swim
-    elif float(current_wind) < 10:
+    elif ocean_dict["Water Temperature"] > 49 and rain_history <= 0.3:
+        if chop == "low" and visibility == "good":
+            return "snorkel"
+        elif chop == "high":
+            return "boogie_board"
+        elif chop == "low": 
+            return "swim"
+        elif weather_dict["Wind Speed"] < 10:
+            return "ride_bike"
+        else:
+            return "stay_in_bed"
+    elif weather_dict["Wind Speed"] < 10:
         return "ride_bike"
     else:
         return "stay_in_bed"
@@ -133,3 +153,12 @@ def send_to_bit():
     recommendation = recommend_sport()
     cloud_bit_call = "https://maker.ifttt.com/trigger/%s/with/key/%s" %(recommendation, keys.ifttt_key)
     urlopen(cloud_bit_call).read()
+
+
+def main():
+    send_to_bit()
+    #How do I auto run every 30 minutes?
+
+
+if __name__ == '__main__':
+    main()
