@@ -168,8 +168,10 @@ def send_to_bit():
 
 
 def main():
-    send_to_bit()
-    #How do I auto run every 30 minutes?
+    while True:
+        send_to_bit()
+        sleep(1800)
+    #Is this the best way to auto run every 30 minutes?
 
 
 if __name__ == '__main__':
