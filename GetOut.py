@@ -18,6 +18,7 @@ def access_weather():
     WU_apiUrl = "http://api.wunderground.com/api/%s/hourly/q/CA/Pacific_Grove.json" % keys.WU_api_key
     WU_response = urlopen(WU_apiUrl)
     weather_data = load(WU_response)
+    # data returned as JSON dictionary
 
     current_temp = weather_data["hourly_forecast"][0]["temp"]["english"]
     current_wind = weather_data["hourly_forecast"][0]["wspd"]["english"]
@@ -39,6 +40,7 @@ def access_rain_history():
     WU_historyUrl = "http://api.wunderground.com/api/%s/history_%s/q/CA/Pacific_Grove.json" % (keys.WU_api_key, yesterday)
     WU_history_response = urlopen(WU_historyUrl)
     weather_history = load(WU_history_response)
+    # data returned as JSON dictionary
 
     rain_yesterday = weather_history["history"]["observations"][0]["precipi"]
     rain_yesterday = float(rain_yesterday)
@@ -89,13 +91,14 @@ def access_ocean_data():
 
 
 def calculate_visibility(rain, weather_data, ocean_data):
-    '''use rain, swell and wind info from past days to predict visibility'''
+    '''use rain, swell and wind info from past days to predict underwater visibility'''
     
-    if rain >= 0.3:
+    if rain >= 0.3: #any rain is bad for visibility, but WU occassionally records 0.1-0.2 precipitation just from fog
         return "poor"
-    elif ocean_data['Swell Height'] > 5: #add swell data from 24 hours ago here
+    elif ocean_data['Swell Height'] > 5: #in Monterey Bay, most divers agree that best vis happens around this threshold
         return "poor"
-    elif weather_data['Wind Speed'] > 15:
+    #add swell data from 24 hours ago here
+    elif weather_data['Wind Speed'] > 15: #faster winds means more waves, but it's always a little windy in Monterey Bay
         return "poor"
     else:
         return "good"
@@ -106,13 +109,13 @@ def calculate_chop(ocean_data):
      period = ocean_data['Swell Period']
      direction = ocean_data['Wave Direction']
      height = ocean_data ['Wave Height']
-     if direction >= 191.25 and direction <= 258.75 and height <= 3:
+     if direction >= 191.25 and direction <= 258.75 and height <= 3: #in Monterey Bay, winds from SW are totally blocked, meaning fewer waves
         return "low" 
-     elif direction > 303.75 and direction <326.25 and height > 3:
+     elif direction > 303.75 and direction <326.25 and height > 3: #in Monterey Bay, direct NW winds aren't blocks, so lots of waves
         return "high"
-     elif period > 10 and height <= 3:
+     elif period > 10 and height <= 3: #numbers come from research on dive forums about Monterey Bay
         return "low"
-     elif period < 8:
+     elif period < 8 and height > 3: #numbers come from research on dive forums about Monterey Bay
         return "high"
      else:
         return "average"
@@ -128,8 +131,9 @@ def check_time():
 
 
 def recommend_sport():
-    """uses weather and surf data to calculate activity recommendation, puts 
-    recommendations in order of preference, so if there's a tie the most preferred 
+    """uses weather and surf data to calculate activity recommendation, if/then 
+    order is based on personal preference for activities, so if there's a tie,
+    the most preferred 
     wins"""
 
     weather_dict = access_weather()
@@ -168,10 +172,11 @@ def send_to_bit():
 
 
 def main():
-    while True:
+    while True: 
+       if time(7,00) <= now_time <= time(22,00):
         send_to_bit()
         sleep(1800)
-    #Is this the best way to auto run every 30 minutes?
+    # #Is this the best way to auto run every 30 minutes?
 
 
 if __name__ == '__main__':
