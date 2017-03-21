@@ -1,6 +1,7 @@
 # Get Out! by Katy Scott, 2017
 # Pulls weather and ocean data for Pacific Grove, CA, and feeds it to an activity
 # clock that recommends an outdoor activity.
+# On web server, add cron job to run every 30 minutes, to update data
 
 from urllib2 import urlopen
 from json import load 
@@ -64,7 +65,7 @@ def access_rain_history():
 def access_ocean_data():
     '''Pulls Pacific Grove ocean data from NOAA buoy, updated every 30 minutes.'''
 
-    ocean_data = {'Water Temperature': '','Wave Height': '','Swell Height':'','Swell Period':'', 'Wave Direction': ''}
+    ocean_data = {'Water Temperature': '','Wave Height': '','Swell Height':'','Swell Period':'', 'Wave Direction': '', 'Yesterday Swell': ''}
 
     raw_temp_data = urlopen("http://www.ndbc.noaa.gov/data/realtime2/46240.txt")
     raw_temp_data.readline()  # Throw away line 1
@@ -84,8 +85,17 @@ def access_ocean_data():
     ocean_data['Swell Period'] = float(current_swell[9])
     ocean_data['Wave Direction'] = float(current_swell[-1])
 
-   # pull swell data from 24 hours ago, to help predict visibility;
-   # this is in line 51 -- how do I read only line 51?
+   # pull swell data from 24 hours ago, to help predict visibility
+    linesCounter = 1
+    for line in raw_swell_data:
+        if linesCounter < 51:
+            linesCounter += 1
+        elif linesCounter == 51:
+            yesterday_swell = raw_swell_data.readline().strip().split(' ')
+            ocean_data['Yesterday Swell'] = float(yesterday_swell[8])
+            linesCounter += 1
+        else: 
+            break
 
     return ocean_data
 
@@ -95,7 +105,7 @@ def calculate_visibility(rain, weather_data, ocean_data):
     
     if rain >= 0.3: #any rain is bad for visibility, but WU occassionally records 0.1-0.2 precipitation just from fog
         return "poor"
-    elif ocean_data['Swell Height'] > 5: #in Monterey Bay, most divers agree that best vis happens around this threshold
+    elif ocean_data['Swell Height'] > 5 or ocean_data['Yesterday Swell'] > 5: #in Monterey Bay, most divers on forums agree that best vis happens around this threshold
         return "poor"
     #add swell data from 24 hours ago here
     elif weather_data['Wind Speed'] > 15: #faster winds means more waves, but it's always a little windy in Monterey Bay
@@ -172,11 +182,7 @@ def send_to_bit():
 
 
 def main():
-    while True: 
-       if time(7,00) <= now_time <= time(22,00):
-        send_to_bit()
-        sleep(1800)
-    # #Is this the best way to auto run every 30 minutes?
+    send_to_bit()
 
 
 if __name__ == '__main__':
