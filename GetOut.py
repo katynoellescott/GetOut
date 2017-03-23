@@ -5,10 +5,10 @@
 
 from urllib2 import urlopen
 from json import load 
+import csv
 from time import sleep, strftime
 from datetime import datetime, timedelta, time
 import keys
-
 
 def access_weather():
     '''Pulls Pacific Grove current temperature, wind speed, rain probability 
@@ -68,33 +68,34 @@ def access_ocean_data():
     ocean_data = {'Water Temperature': '','Wave Height': '','Swell Height':'','Swell Period':'', 'Wave Direction': '', 'Yesterday Swell': ''}
 
     raw_temp_data = urlopen("http://www.ndbc.noaa.gov/data/realtime2/46240.txt")
-    raw_temp_data.readline()  # Throw away line 1
-    raw_temp_data.readline()  # Throw away line 2
-    current_temp_data = raw_temp_data.readline().strip().split(' ')
-    current_temp_C = float(current_temp_data[34])
-    current_temp = (current_temp_C * 1.8) + 32 #convert to Fahrenheit
+    r = csv.DictReader(raw_temp_data, delimiter=' ', skipinitialspace=True)
+    for row in r:
+        try:
+            current_temp_C = float(row['WTMP'])
+            break
+        except: #Google python exceptions, can be more specific to a certain error
+            # probably wasn't a float stored there
+            pass
+    ocean_data['Water Temperature'] = (current_temp_C * 1.8) + 32 #convert to Fahrenheit
 
+    latest_hr = None
+    latest_min = None
     raw_swell_data = urlopen("http://www.ndbc.noaa.gov/data/realtime2/46240.spec")
-    raw_swell_data.readline()  # Throw away line 1
-    raw_swell_data.readline()  # Throw away line 2
-    current_swell = raw_swell_data.readline().strip().split(' ')
-
-    ocean_data['Water Temperature'] = current_temp
-    ocean_data['Wave Height'] = float(current_swell[6])
-    ocean_data['Swell Height'] = float(current_swell[8])
-    ocean_data['Swell Period'] = float(current_swell[9])
-    ocean_data['Wave Direction'] = float(current_swell[-1])
-
-   # pull swell data from 24 hours ago, to help predict visibility
-    linesCounter = 1
-    for line in raw_swell_data:
-        if linesCounter < 51:
-            linesCounter += 1
-        elif linesCounter == 51:
-            yesterday_swell = raw_swell_data.readline().strip().split(' ')
-            ocean_data['Yesterday Swell'] = float(yesterday_swell[8])
-            linesCounter += 1
-        else: 
+    r = csv.DictReader(raw_swell_data, delimiter=' ', skipinitialspace=True)
+    for row in r:
+        if latest_hr == None and latest_min == None:
+            try:
+                ocean_data['Wave Height'] = float(row['WVHT'])
+                ocean_data['Swell Height'] = float(row['SwH'])
+                ocean_data['Swell Period'] = float(row['SwP'])
+                ocean_data['Wave Direction'] = float(row['MWD'])
+                latest_hr = row['hh']
+                latest_min = row['mm']
+            except:
+                # probably wasn't a float stored there
+                pass
+        elif latest_hr == row['hh'] and latest_min == row['mm']:
+            ocean_data['Yesterday Swell'] = float(row['SwH'])
             break
 
     return ocean_data
@@ -171,7 +172,6 @@ def recommend_sport():
         return "ride_bike"
     else:
         return "stay_in_bed"
-    
 
 def send_to_bit():
     """sends recommended sport to IFTTT.com, which translates it to a percentage
