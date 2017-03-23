@@ -1,0 +1,95 @@
+body {
+    background: #495C70;
+}
+
+.form-style{
+    font: 95% Arial, Helvetica, sans-serif;
+    width: 50%;
+    margin: auto;
+    padding: 16px;
+}
+.form-style h1{
+    background: #495C70;
+    padding: 20px 0;
+    font-size: 300%;
+    font-weight: 300;
+    text-align: center;
+    color: #fff;
+}
+
+.form-style img{
+    display: block;
+    margin: 0 auto;;
+}
+
+.sub-head{
+    background: #495C70;
+    padding: 20px 0;
+    font-size: 120%;
+    font-style: italic;
+    text-align: center;
+    color: #fff;
+}
+
+.form-style input[type="text"],
+.form-style textarea
+{
+    width: 90%;
+    background: #fff;
+    margin-bottom: 4%;
+    border: 1px solid #ccc;
+    padding: 3%;
+    color: #555;
+    font: 95% Arial, Helvetica, sans-serif;
+}
+
+.form-style input[type="text"]:focus,
+.form-style textarea:focus
+{
+    box-shadow: 0 0 5px #43D1AF;
+    padding: 3%;
+    border: 1px solid #43D1AF;
+}
+
+.form-style input[type=submit],
+.form-style input[type=button]{
+    background: #576E86;
+    font-size: 100%;
+    border: none;
+    padding: 8px 10px 8px 10px;
+    border-radius: 5px;
+    color: #A8BACE;
+}
+.form-style input[type=submit]:hover,
+.form-style input[type=button]:hover{
+    background: #394D61;
+}
+
+.button-holder {
+    text-align: center;
+}
+
+.snorkel {
+
+
+}
+
+.boogie {
+
+
+}
+
+.bed {
+
+
+}
+
+.bike {
+
+
+}
+
+.swim {
+
+
+}
